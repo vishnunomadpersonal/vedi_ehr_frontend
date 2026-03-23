@@ -22,7 +22,16 @@ const baseConfig: NextConfig = {
       }
     ]
   },
-  transpilePackages: ['geist']
+  transpilePackages: ['geist'],
+  async rewrites() {
+    const backend = process.env.BACKEND_URL || 'http://localhost:8000';
+    return [
+      {
+        source: '/api/:path*',
+        destination: `${backend}/api/:path*`
+      }
+    ];
+  }
 };
 
 let configWithPlugins = baseConfig;

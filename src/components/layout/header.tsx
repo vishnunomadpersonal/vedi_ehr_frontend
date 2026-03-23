@@ -1,3 +1,5 @@
+'use client';
+
 import React from 'react';
 import { SidebarTrigger } from '../ui/sidebar';
 import { Separator } from '../ui/separator';

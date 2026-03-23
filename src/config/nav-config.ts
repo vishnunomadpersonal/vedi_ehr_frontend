@@ -3,36 +3,11 @@ import { NavItem } from '@/types';
 /**
  * Navigation configuration with RBAC support
  *
- * This configuration is used for both the sidebar navigation and Cmd+K bar.
- *
- * RBAC Access Control:
- * Each navigation item can have an `access` property that controls visibility
- * based on permissions, plans, features, roles, and organization context.
- *
- * Examples:
- *
- * 1. Require organization:
- *    access: { requireOrg: true }
- *
- * 2. Require specific permission:
- *    access: { requireOrg: true, permission: 'org:teams:manage' }
- *
- * 3. Require specific plan:
- *    access: { plan: 'pro' }
- *
- * 4. Require specific feature:
- *    access: { feature: 'premium_access' }
- *
- * 5. Require specific role:
- *    access: { role: 'admin' }
- *
- * 6. Multiple conditions (all must be true):
- *    access: { requireOrg: true, permission: 'org:teams:manage', plan: 'pro' }
- *
- * Note: The `visible` function is deprecated but still supported for backward compatibility.
- * Use the `access` property for new items.
+ * Combines Kiranism dashboard starter nav with Vedi EHR clinical routes.
+ * Used for both the sidebar navigation and Cmd+K bar.
  */
 export const navItems: NavItem[] = [
+  // ── Kiranism Starter ──
   {
     title: 'Dashboard',
     url: '/dashboard/overview',
@@ -42,28 +17,10 @@ export const navItems: NavItem[] = [
     items: []
   },
   {
-    title: 'Workspaces',
-    url: '/dashboard/workspaces',
-    icon: 'workspace',
-    isActive: false,
-    items: []
-  },
-  {
-    title: 'Teams',
-    url: '/dashboard/workspaces/team',
-    icon: 'teams',
-    isActive: false,
-    items: [],
-    // Require organization to be active
-    access: { requireOrg: true }
-    // Alternative: require specific permission
-    // access: { requireOrg: true, permission: 'org:teams:view' }
-  },
-  {
     title: 'Product',
     url: '/dashboard/product',
     icon: 'product',
-    shortcut: ['p', 'p'],
+    shortcut: ['p', 'r'],
     isActive: false,
     items: []
   },
@@ -75,23 +32,166 @@ export const navItems: NavItem[] = [
     isActive: false,
     items: []
   },
+
+  // ── EHR Clinical ──
   {
-    title: 'Pro',
-    url: '#', // Placeholder as there is no direct link for the parent
-    icon: 'pro',
-    isActive: true,
+    title: 'Patients',
+    url: '/dashboard/patients',
+    icon: 'patients',
+    shortcut: ['p', 'p'],
+    isActive: false,
     items: [
       {
-        title: 'Exclusive',
-        url: '/dashboard/exclusive',
-        icon: 'exclusive',
-        shortcut: ['m', 'm']
+        title: 'Patient List',
+        url: '/dashboard/patients',
+        shortcut: ['p', 'l']
+      },
+      {
+        title: 'Register New',
+        url: '/dashboard/patients/create',
+        shortcut: ['p', 'n']
       }
     ]
   },
   {
+    title: 'Encounters',
+    url: '/dashboard/encounters',
+    icon: 'encounters',
+    shortcut: ['e', 'e'],
+    isActive: false,
+    items: [
+      {
+        title: 'All Encounters',
+        url: '/dashboard/encounters',
+        shortcut: ['e', 'l']
+      },
+      {
+        title: 'Start New',
+        url: '/dashboard/encounters/create',
+        shortcut: ['e', 'n']
+      },
+      {
+        title: 'Templates',
+        url: '/dashboard/encounters/templates',
+        shortcut: ['e', 't']
+      }
+    ]
+  },
+  {
+    title: 'AI Scribe',
+    url: '/dashboard/sessions',
+    icon: 'mic',
+    shortcut: ['a', 'i'],
+    isActive: false,
+    items: [
+      { title: 'Audio Sessions', url: '/dashboard/sessions' },
+      { title: 'Recordings', url: '/dashboard/recordings' },
+      { title: 'Live Session', url: '/dashboard/recordings/live' }
+    ]
+  },
+  {
+    title: 'Schedule',
+    url: '/dashboard/schedule',
+    icon: 'calendar',
+    shortcut: ['s', 's'],
+    isActive: false,
+    items: [{ title: 'Calendar', url: '/dashboard/schedule' }]
+  },
+  {
+    title: 'Orders & Labs',
+    url: '/dashboard/orders',
+    icon: 'flask',
+    shortcut: ['o', 'o'],
+    isActive: false,
+    items: [
+      { title: 'All Orders', url: '/dashboard/orders' },
+      { title: 'New Order', url: '/dashboard/orders/create' }
+    ]
+  },
+  {
+    title: 'Prescriptions',
+    url: '/dashboard/prescriptions',
+    icon: 'pill',
+    shortcut: ['r', 'x'],
+    isActive: false,
+    items: [
+      { title: 'All Prescriptions', url: '/dashboard/prescriptions' },
+      { title: 'New Prescription', url: '/dashboard/prescriptions/create' },
+      { title: 'Interactions', url: '/dashboard/prescriptions/interactions' },
+      { title: 'Renewals', url: '/dashboard/prescriptions/renewals' }
+    ]
+  },
+  {
+    title: 'Billing',
+    url: '/dashboard/billing',
+    icon: 'billing',
+    shortcut: ['b', 'b'],
+    isActive: false,
+    items: [
+      { title: 'Claims', url: '/dashboard/billing' },
+      { title: 'New Claim', url: '/dashboard/billing/create' },
+      { title: 'Payments', url: '/dashboard/billing/payments' },
+      { title: 'Denials', url: '/dashboard/billing/denials' },
+      { title: 'Eligibility', url: '/dashboard/billing/eligibility' },
+      { title: 'Fee Schedule', url: '/dashboard/billing/fee-schedule' }
+    ]
+  },
+  {
+    title: 'Messages',
+    url: '/dashboard/messages',
+    icon: 'mail',
+    shortcut: ['m', 'g'],
+    isActive: false,
+    items: [
+      { title: 'Inbox', url: '/dashboard/messages' },
+      { title: 'Compose', url: '/dashboard/messages/compose' },
+      { title: 'Notifications', url: '/dashboard/messages/notifications' }
+    ]
+  },
+  {
+    title: 'Telehealth',
+    url: '/dashboard/telehealth',
+    icon: 'video',
+    shortcut: ['t', 'h'],
+    isActive: false,
+    items: [
+      { title: 'Sessions', url: '/dashboard/telehealth' },
+      { title: 'Waiting Room', url: '/dashboard/telehealth/waiting-room' }
+    ]
+  },
+  {
+    title: 'Reports',
+    url: '/dashboard/reports',
+    icon: 'chart',
+    shortcut: ['r', 'r'],
+    isActive: false,
+    items: [
+      { title: 'Overview', url: '/dashboard/reports' },
+      { title: 'Clinical', url: '/dashboard/reports/clinical' },
+      { title: 'Financial', url: '/dashboard/reports/financial' },
+      { title: 'Operational', url: '/dashboard/reports/operational' }
+    ]
+  },
+
+  // ── Admin & Account ──
+  {
+    title: 'Admin',
+    url: '/dashboard/admin',
+    icon: 'shield',
+    shortcut: ['a', 'd'],
+    isActive: true,
+    items: [
+      { title: 'Overview', url: '/dashboard/admin' },
+      { title: 'Users', url: '/dashboard/admin/users' },
+      { title: 'Roles', url: '/dashboard/admin/roles' },
+      { title: 'Providers', url: '/dashboard/admin/providers' },
+      { title: 'Settings', url: '/dashboard/admin/settings' },
+      { title: 'Audit Log', url: '/dashboard/admin/audit-log' }
+    ]
+  },
+  {
     title: 'Account',
-    url: '#', // Placeholder as there is no direct link for the parent
+    url: '#',
     icon: 'account',
     isActive: true,
     items: [
@@ -100,16 +200,6 @@ export const navItems: NavItem[] = [
         url: '/dashboard/profile',
         icon: 'profile',
         shortcut: ['m', 'm']
-      },
-      {
-        title: 'Billing',
-        url: '/dashboard/billing',
-        icon: 'billing',
-        shortcut: ['b', 'b'],
-        // Only show billing if in organization context
-        access: { requireOrg: true }
-        // Alternative: require billing management permission
-        // access: { requireOrg: true, permission: 'org:manage:billing' }
       },
       {
         title: 'Login',

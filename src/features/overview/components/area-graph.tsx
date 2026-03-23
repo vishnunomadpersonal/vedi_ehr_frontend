@@ -1,5 +1,6 @@
 'use client';
 
+import * as React from 'react';
 import { IconTrendingUp } from '@tabler/icons-react';
 import { Area, AreaChart, CartesianGrid, XAxis } from 'recharts';
 
@@ -42,6 +43,16 @@ const chartConfig = {
 } satisfies ChartConfig;
 
 export function AreaGraph() {
+  const [isClient, setIsClient] = React.useState(false);
+
+  React.useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  if (!isClient) {
+    return null;
+  }
+
   return (
     <Card className='@container/card'>
       <CardHeader>

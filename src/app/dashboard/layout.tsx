@@ -1,5 +1,5 @@
 import KBar from '@/components/kbar';
-import AppSidebar from '@/components/layout/app-sidebar';
+import { ClientSidebar } from '@/components/layout/client-sidebar';
 import Header from '@/components/layout/header';
 import { InfoSidebar } from '@/components/layout/info-sidebar';
 import { InfobarProvider } from '@/components/ui/infobar';
@@ -28,7 +28,7 @@ export default async function DashboardLayout({
     <KBar>
       <SidebarProvider defaultOpen={defaultOpen}>
         <InfobarProvider defaultOpen={false}>
-          <AppSidebar />
+          <ClientSidebar />
           <SidebarInset>
             <Header />
             {/* page main content */}

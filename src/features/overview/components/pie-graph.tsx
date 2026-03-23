@@ -58,6 +58,16 @@ export function PieGraph() {
     return chartData.reduce((acc, curr) => acc + curr.visitors, 0);
   }, []);
 
+  const [isClient, setIsClient] = React.useState(false);
+
+  React.useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  if (!isClient) {
+    return null;
+  }
+
   return (
     <Card className='@container/card'>
       <CardHeader>

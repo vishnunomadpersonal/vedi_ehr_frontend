@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback, useEffect, useMemo } from 'react';
+import { toast } from 'sonner';
 import { useEhrList, useEhrShow } from '@/hooks/use-ehr-data';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';

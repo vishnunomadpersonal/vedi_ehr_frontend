@@ -118,7 +118,7 @@ export function useAuth() {
       if (result.success) {
         setIsAuthenticated(true);
         setIdentity(getIdentity());
-        router.push('/');
+        router.push('/dashboard/overview');
       }
       return result;
     },

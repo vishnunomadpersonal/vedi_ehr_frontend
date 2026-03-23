@@ -1,0 +1,8 @@
+node_modules
+.next
+.git
+.husky
+*.md
+.env*
+.vscode
+.zencoder

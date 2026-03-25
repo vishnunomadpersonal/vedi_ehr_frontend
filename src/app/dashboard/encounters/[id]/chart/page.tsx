@@ -40,7 +40,7 @@ import type { Encounter, ClinicalImpression, Transcript } from '@/types';
 import { PatientSummary } from '@/components/clinical/patient-summary';
 import { toast } from 'sonner';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || '/api';
 
 const statusColors: Record<
   string,

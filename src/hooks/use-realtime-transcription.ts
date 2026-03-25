@@ -90,9 +90,10 @@ interface UseRealtimeTranscriptionOptions {
 
 function getWsBaseUrl(override?: string): string {
   if (override) return override;
-  // Always connect to the FastAPI backend (port 8000), NOT the Kafka WS
+  // Route through nginx proxy (same origin) — wss:// on HTTPS, ws:// on HTTP
   if (typeof window !== 'undefined') {
-    return `ws://${window.location.hostname}:8000`;
+    const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    return `${proto}//${window.location.host}`;
   }
   return 'ws://localhost:8000';
 }

@@ -33,7 +33,7 @@ import {
   type StagedFileUploaderHandle
 } from '@/components/files/staged-file-uploader';
 
-const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000/api';
+const API = process.env.NEXT_PUBLIC_API_URL ?? '/api';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Zod schemas — grouped by table

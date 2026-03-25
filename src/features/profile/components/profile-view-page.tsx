@@ -19,9 +19,8 @@ export default function ProfileViewPage() {
   } | null>(null);
 
   useEffect(() => {
-    getIdentity()
-      .then(setUser)
-      .catch(() => {});
+    const identity = getIdentity();
+    if (identity) setUser(identity);
   }, []);
 
   const initials =

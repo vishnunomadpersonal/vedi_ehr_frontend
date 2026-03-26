@@ -98,10 +98,14 @@ export default function EncounterShowPage() {
   const encounter = data?.data;
 
   // Fetch patient data for sidebar
+  const patientId =
+    encounter?.patient_id && encounter.patient_id !== '0'
+      ? encounter.patient_id
+      : '';
   const { query: patientQuery } = useEhrShow<Record<string, unknown>>({
     resource: 'patients',
-    id: encounter?.patient_id || '',
-    queryOptions: { enabled: !!encounter?.patient_id }
+    id: patientId,
+    queryOptions: { enabled: !!patientId }
   });
   const rawPatient = patientQuery.data?.data as
     | Record<string, unknown>

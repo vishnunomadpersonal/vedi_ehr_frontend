@@ -86,10 +86,7 @@ export async function createAppointment(
   event: CalEvent
 ): Promise<{ data: AppointmentDTO; status: number }> {
   const body = {
-    patient_id:
-      Number(event.extendedProps?.user_id) ||
-      Number(event.extendedProps?.patient_id) ||
-      0,
+    patient_id: String(event.extendedProps?.patient_id || '0'),
     doctor_id: Number(event.extendedProps?.provider_id) || 0,
     appointment_start_time: event.start,
     appointment_end_time: event.end,

@@ -53,12 +53,20 @@ const patientFields = z.object({
   race: z.string().optional(),
   ethnicity: z.string().optional(),
   primary_language: z.string().optional(),
+  speaking_language: z.string().optional(),
   birth_sex: z.string().optional(),
+  eye_color: z.string().optional(),
+  height: z.string().optional(),
+  weight: z.string().optional(),
+  suppose_name: z.string().optional(),
+  other_family_member_seen: z.string().optional(),
   occupation: z.string().optional(),
   employment_status: z.string().optional(),
   email: z.string().email('Invalid email').optional().or(z.literal('')),
+  mobile_phone: z.string().optional(),
   street: z.string().optional(),
   address_line2: z.string().optional(),
+  address_district: z.string().optional(),
   city: z.string().optional(),
   state: z.string().optional(),
   zip_code: z.string().optional(),
@@ -69,7 +77,13 @@ const patientFields = z.object({
   ssn: z.string().optional(),
   driver_license_no: z.string().optional(),
   primary_care_physician: z.string().optional(),
-  referring_physician: z.string().optional()
+  referring_physician: z.string().optional(),
+  // Consent & HIPAA
+  hipaa_consent_given: z.boolean().optional(),
+  hipaa_consent_date: z.string().optional(),
+  hipaa_privacy_notice_given: z.boolean().optional(),
+  patient_acknowledgment: z.boolean().optional(),
+  certification_date: z.string().optional()
 });
 
 const insuranceFields = z.object({
@@ -82,25 +96,59 @@ const insuranceFields = z.object({
   policy_holder_name: z.string().optional(),
   relationship_to_patient: z.string().optional(),
   secondary_insurance_provider: z.string().optional(),
+  network: z.string().optional(),
   copay_amount: z.string().optional(),
-  deductible_amount: z.string().optional()
+  deductible_amount: z.string().optional(),
+  verification_status: z.string().optional()
 });
 
 const lifestyleFields = z.object({
+  // Allergies
   allergies_medications: z.string().optional(),
   allergies_food: z.string().optional(),
   allergies_environmental: z.string().optional(),
   allergies_other: z.string().optional(),
+  no_known_drug_allergies: z.boolean().optional(),
+  no_known_environmental_allergies: z.boolean().optional(),
+  no_known_food_allergies: z.boolean().optional(),
+  // Tobacco / Smoking
   smoking_status: z.string().optional(),
+  tobacco_type: z.string().optional(),
+  packs_per_day: z.string().optional(),
+  pack_years: z.string().optional(),
+  tobacco_use_start_date: z.string().optional(),
+  tobacco_use_end_date: z.string().optional(),
+  ready_to_quit: z.boolean().optional(),
+  counseling_provided: z.boolean().optional(),
+  // Alcohol
   alcohol_status: z.string().optional(),
+  alcohol_drinks_per_week: z.string().optional(),
+  alcohol_type: z.string().optional(),
+  alcohol_binge_frequency: z.string().optional(),
+  audit_c_score: z.string().optional(),
+  // Substance use
   recreational_drugs: z.string().optional(),
+  iv_drug_use: z.boolean().optional(),
+  substance_use_treatment_history: z.boolean().optional(),
+  naloxone_prescribed: z.boolean().optional(),
+  // Exercise / Diet / Sleep
   exercise_frequency: z.string().optional(),
+  exercise_minutes_per_week: z.string().optional(),
   exercise_type: z.string().optional(),
   diet_type: z.string().optional(),
   dietary_restrictions: z.string().optional(),
   caffeine_use: z.string().optional(),
   sleep_hours_per_night: z.string().optional(),
   sleep_quality: z.string().optional(),
+  // Social determinants
+  occupational_hazards: z.string().optional(),
+  education_level: z.string().optional(),
+  living_situation: z.string().optional(),
+  social_support: z.string().optional(),
+  transportation_access: z.boolean().optional(),
+  food_security: z.string().optional(),
+  sexually_active: z.boolean().optional(),
+  sexual_orientation: z.string().optional(),
   social_history_notes: z.string().optional()
 });
 
@@ -278,11 +326,32 @@ export default function CreatePatientPage() {
       }
 
       if (hasAnyValue(lifestyle)) {
+        const lsPayload: Record<string, unknown> = {
+          ...lifestyle,
+          patient_id: pid
+        };
+        // Convert string numbers → actual numbers
+        if (
+          lsPayload.alcohol_drinks_per_week &&
+          lsPayload.alcohol_drinks_per_week !== ''
+        )
+          lsPayload.alcohol_drinks_per_week = Number(
+            lsPayload.alcohol_drinks_per_week
+          );
+        if (lsPayload.audit_c_score && lsPayload.audit_c_score !== '')
+          lsPayload.audit_c_score = Number(lsPayload.audit_c_score);
+        if (
+          lsPayload.exercise_minutes_per_week &&
+          lsPayload.exercise_minutes_per_week !== ''
+        )
+          lsPayload.exercise_minutes_per_week = Number(
+            lsPayload.exercise_minutes_per_week
+          );
         promises.push(
           fetch(`${API}/v1/lifestyle`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ ...lifestyle, patient_id: pid })
+            body: JSON.stringify(lsPayload)
           })
         );
       }
@@ -389,6 +458,7 @@ export default function CreatePatientPage() {
             <TabsTrigger value='insurance'>Insurance</TabsTrigger>
             <TabsTrigger value='lifestyle'>Lifestyle & Habits</TabsTrigger>
             <TabsTrigger value='medical'>Medical History</TabsTrigger>
+            <TabsTrigger value='consent'>Consent & HIPAA</TabsTrigger>
             <TabsTrigger
               value='documents'
               className='flex items-center gap-1.5'
@@ -578,9 +648,18 @@ export default function CreatePatientPage() {
                     />
                   </div>
                   <div className='space-y-2'>
+                    <Label>Speaking Language</Label>
+                    <Input
+                      placeholder='English, Spanish'
+                      {...register('speaking_language')}
+                    />
+                  </div>
+                  <div className='space-y-2'>
                     <Label>Occupation</Label>
                     <Input {...register('occupation')} />
                   </div>
+                </div>
+                <div className='grid grid-cols-3 gap-4'>
                   <div className='space-y-2'>
                     <Label>Employment Status</Label>
                     <Select
@@ -601,6 +680,44 @@ export default function CreatePatientPage() {
                       </SelectContent>
                     </Select>
                   </div>
+                  <div className='space-y-2'>
+                    <Label>Eye Color</Label>
+                    <Input
+                      placeholder='Brown, Blue, Green'
+                      {...register('eye_color')}
+                    />
+                  </div>
+                  <div className='space-y-2'>
+                    <Label>Spouse Name</Label>
+                    <Input
+                      placeholder='Full name'
+                      {...register('suppose_name')}
+                    />
+                  </div>
+                </div>
+                {/* Physical / Family */}
+                <div className='grid grid-cols-3 gap-4'>
+                  <div className='space-y-2'>
+                    <Label>Height</Label>
+                    <Input
+                      placeholder={`5'10" or 178 cm`}
+                      {...register('height')}
+                    />
+                  </div>
+                  <div className='space-y-2'>
+                    <Label>Weight</Label>
+                    <Input
+                      placeholder='170 lbs or 77 kg'
+                      {...register('weight')}
+                    />
+                  </div>
+                  <div className='space-y-2'>
+                    <Label>Other Family Member Seen</Label>
+                    <Input
+                      placeholder='Name of family member'
+                      {...register('other_family_member_seen')}
+                    />
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -614,7 +731,7 @@ export default function CreatePatientPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent className='space-y-4'>
-                <div className='grid grid-cols-2 gap-4'>
+                <div className='grid grid-cols-3 gap-4'>
                   <div className='space-y-2'>
                     <Label>Phone *</Label>
                     <Input
@@ -627,6 +744,14 @@ export default function CreatePatientPage() {
                         {String(errors.phone.message)}
                       </p>
                     )}
+                  </div>
+                  <div className='space-y-2'>
+                    <Label>Mobile Phone</Label>
+                    <Input
+                      type='tel'
+                      placeholder='(555) 987-6543'
+                      {...register('mobile_phone')}
+                    />
                   </div>
                   <div className='space-y-2'>
                     <Label>Email</Label>
@@ -642,7 +767,7 @@ export default function CreatePatientPage() {
                     )}
                   </div>
                 </div>
-                <div className='grid grid-cols-2 gap-4'>
+                <div className='grid grid-cols-3 gap-4'>
                   <div className='space-y-2'>
                     <Label>Street Address</Label>
                     <Input
@@ -655,6 +780,13 @@ export default function CreatePatientPage() {
                     <Input
                       placeholder='Apt, Suite, Unit'
                       {...register('address_line2')}
+                    />
+                  </div>
+                  <div className='space-y-2'>
+                    <Label>District</Label>
+                    <Input
+                      placeholder='District / Borough'
+                      {...register('address_district')}
                     />
                   </div>
                 </div>
@@ -877,10 +1009,34 @@ export default function CreatePatientPage() {
                     />
                   </div>
                 </div>
-                {/* Secondary */}
-                <div className='space-y-2'>
-                  <Label>Secondary Insurance Provider</Label>
-                  <Input {...register('secondary_insurance_provider')} />
+                {/* Network & Verification */}
+                <div className='grid grid-cols-3 gap-4'>
+                  <div className='space-y-2'>
+                    <Label>Secondary Insurance Provider</Label>
+                    <Input {...register('secondary_insurance_provider')} />
+                  </div>
+                  <div className='space-y-2'>
+                    <Label>Network</Label>
+                    <Input
+                      placeholder='In-Network / Out-of-Network'
+                      {...register('network')}
+                    />
+                  </div>
+                  <div className='space-y-2'>
+                    <Label>Verification Status</Label>
+                    <Select
+                      onValueChange={(v) => setValue('verification_status', v)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder='Select' />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value='verified'>Verified</SelectItem>
+                        <SelectItem value='pending'>Pending</SelectItem>
+                        <SelectItem value='denied'>Denied</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -892,11 +1048,12 @@ export default function CreatePatientPage() {
               <CardHeader>
                 <CardTitle>Lifestyle & Habits</CardTitle>
                 <CardDescription>
-                  Allergies, substance use, exercise, diet, and sleep
+                  Allergies, substance use, exercise, diet, sleep, and social
+                  determinants
                 </CardDescription>
               </CardHeader>
               <CardContent className='space-y-6'>
-                {/* Allergies */}
+                {/* ── Allergies ── */}
                 <div>
                   <h3 className='mb-3 text-sm font-semibold'>Allergies</h3>
                   <div className='grid grid-cols-2 gap-4'>
@@ -929,11 +1086,27 @@ export default function CreatePatientPage() {
                       />
                     </div>
                   </div>
+                  <div className='mt-3 flex flex-wrap gap-6'>
+                    <CheckField
+                      name='no_known_drug_allergies'
+                      label='No Known Drug Allergies (NKDA)'
+                    />
+                    <CheckField
+                      name='no_known_environmental_allergies'
+                      label='No Known Environmental Allergies'
+                    />
+                    <CheckField
+                      name='no_known_food_allergies'
+                      label='No Known Food Allergies'
+                    />
+                  </div>
                 </div>
 
-                {/* Substance use */}
+                {/* ── Tobacco / Smoking ── */}
                 <div>
-                  <h3 className='mb-3 text-sm font-semibold'>Substance Use</h3>
+                  <h3 className='mb-3 text-sm font-semibold'>
+                    Tobacco / Smoking
+                  </h3>
                   <div className='grid grid-cols-3 gap-4'>
                     <div className='space-y-2'>
                       <Label>Smoking Status</Label>
@@ -947,9 +1120,54 @@ export default function CreatePatientPage() {
                           <SelectItem value='Never'>Never</SelectItem>
                           <SelectItem value='Former'>Former</SelectItem>
                           <SelectItem value='Current'>Current</SelectItem>
+                          <SelectItem value='Everyday'>Everyday</SelectItem>
+                          <SelectItem value='Someday'>Someday</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
+                    <div className='space-y-2'>
+                      <Label>Tobacco Type</Label>
+                      <Input
+                        placeholder='Cigarettes, Cigars, Chewing'
+                        {...register('tobacco_type')}
+                      />
+                    </div>
+                    <div className='space-y-2'>
+                      <Label>Packs per Day</Label>
+                      <Input placeholder='0.5' {...register('packs_per_day')} />
+                    </div>
+                    <div className='space-y-2'>
+                      <Label>Pack Years</Label>
+                      <Input placeholder='10' {...register('pack_years')} />
+                    </div>
+                    <div className='space-y-2'>
+                      <Label>Start Date</Label>
+                      <Input
+                        type='date'
+                        {...register('tobacco_use_start_date')}
+                      />
+                    </div>
+                    <div className='space-y-2'>
+                      <Label>End Date</Label>
+                      <Input
+                        type='date'
+                        {...register('tobacco_use_end_date')}
+                      />
+                    </div>
+                  </div>
+                  <div className='mt-3 flex flex-wrap gap-6'>
+                    <CheckField name='ready_to_quit' label='Ready to Quit' />
+                    <CheckField
+                      name='counseling_provided'
+                      label='Counseling Provided'
+                    />
+                  </div>
+                </div>
+
+                {/* ── Alcohol Use ── */}
+                <div>
+                  <h3 className='mb-3 text-sm font-semibold'>Alcohol Use</h3>
+                  <div className='grid grid-cols-3 gap-4'>
                     <div className='space-y-2'>
                       <Label>Alcohol Status</Label>
                       <Select
@@ -959,13 +1177,51 @@ export default function CreatePatientPage() {
                           <SelectValue placeholder='Select' />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value='None'>None</SelectItem>
+                          <SelectItem value='Never'>Never</SelectItem>
+                          <SelectItem value='Former'>Former</SelectItem>
                           <SelectItem value='Social'>Social</SelectItem>
                           <SelectItem value='Moderate'>Moderate</SelectItem>
                           <SelectItem value='Heavy'>Heavy</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
+                    <div className='space-y-2'>
+                      <Label>Drinks per Week</Label>
+                      <Input
+                        type='number'
+                        placeholder='0'
+                        {...register('alcohol_drinks_per_week')}
+                      />
+                    </div>
+                    <div className='space-y-2'>
+                      <Label>Alcohol Type</Label>
+                      <Input
+                        placeholder='Beer, Wine, Spirits'
+                        {...register('alcohol_type')}
+                      />
+                    </div>
+                    <div className='space-y-2'>
+                      <Label>Binge Frequency</Label>
+                      <Input
+                        placeholder='Rarely, Monthly, Weekly'
+                        {...register('alcohol_binge_frequency')}
+                      />
+                    </div>
+                    <div className='space-y-2'>
+                      <Label>AUDIT-C Score</Label>
+                      <Input
+                        type='number'
+                        placeholder='0-12'
+                        {...register('audit_c_score')}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* ── Substance Use ── */}
+                <div>
+                  <h3 className='mb-3 text-sm font-semibold'>Substance Use</h3>
+                  <div className='grid grid-cols-3 gap-4'>
                     <div className='space-y-2'>
                       <Label>Recreational Drugs</Label>
                       <Select
@@ -982,14 +1238,25 @@ export default function CreatePatientPage() {
                       </Select>
                     </div>
                   </div>
+                  <div className='mt-3 flex flex-wrap gap-6'>
+                    <CheckField name='iv_drug_use' label='IV Drug Use' />
+                    <CheckField
+                      name='substance_use_treatment_history'
+                      label='Substance Use Treatment History'
+                    />
+                    <CheckField
+                      name='naloxone_prescribed'
+                      label='Naloxone Prescribed'
+                    />
+                  </div>
                 </div>
 
-                {/* Exercise */}
+                {/* ── Exercise / Diet / Sleep ── */}
                 <div>
                   <h3 className='mb-3 text-sm font-semibold'>
                     Exercise & Diet
                   </h3>
-                  <div className='grid grid-cols-2 gap-4'>
+                  <div className='grid grid-cols-3 gap-4'>
                     <div className='space-y-2'>
                       <Label>Exercise Frequency</Label>
                       <Select
@@ -1005,6 +1272,14 @@ export default function CreatePatientPage() {
                           <SelectItem value='5+/week'>5+/week</SelectItem>
                         </SelectContent>
                       </Select>
+                    </div>
+                    <div className='space-y-2'>
+                      <Label>Minutes per Week</Label>
+                      <Input
+                        type='number'
+                        placeholder='150'
+                        {...register('exercise_minutes_per_week')}
+                      />
                     </div>
                     <div className='space-y-2'>
                       <Label>Exercise Type</Label>
@@ -1027,21 +1302,16 @@ export default function CreatePatientPage() {
                         {...register('dietary_restrictions')}
                       />
                     </div>
+                    <div className='space-y-2'>
+                      <Label>Caffeine Use</Label>
+                      <Input
+                        placeholder='2 cups/day'
+                        {...register('caffeine_use')}
+                      />
+                    </div>
                   </div>
                 </div>
 
-                {/* Caffeine */}
-                <div className='grid grid-cols-2 gap-4'>
-                  <div className='space-y-2'>
-                    <Label>Caffeine Use</Label>
-                    <Input
-                      placeholder='2 cups/day'
-                      {...register('caffeine_use')}
-                    />
-                  </div>
-                </div>
-
-                {/* Sleep */}
                 <div>
                   <h3 className='mb-3 text-sm font-semibold'>Sleep</h3>
                   <div className='grid grid-cols-2 gap-4'>
@@ -1067,6 +1337,67 @@ export default function CreatePatientPage() {
                         </SelectContent>
                       </Select>
                     </div>
+                  </div>
+                </div>
+
+                {/* ── Social Determinants ── */}
+                <div>
+                  <h3 className='mb-3 text-sm font-semibold'>
+                    Social Determinants
+                  </h3>
+                  <div className='grid grid-cols-3 gap-4'>
+                    <div className='space-y-2'>
+                      <Label>Occupational Hazards</Label>
+                      <Input
+                        placeholder='Chemical exposure, etc.'
+                        {...register('occupational_hazards')}
+                      />
+                    </div>
+                    <div className='space-y-2'>
+                      <Label>Education Level</Label>
+                      <Input
+                        placeholder='High school, College, etc.'
+                        {...register('education_level')}
+                      />
+                    </div>
+                    <div className='space-y-2'>
+                      <Label>Living Situation</Label>
+                      <Input
+                        placeholder='Alone, With family, etc.'
+                        {...register('living_situation')}
+                      />
+                    </div>
+                    <div className='space-y-2'>
+                      <Label>Social Support</Label>
+                      <Input
+                        placeholder='Strong, Limited, None'
+                        {...register('social_support')}
+                      />
+                    </div>
+                    <div className='space-y-2'>
+                      <Label>Food Security</Label>
+                      <Input
+                        placeholder='Secure, Insecure'
+                        {...register('food_security')}
+                      />
+                    </div>
+                    <div className='space-y-2'>
+                      <Label>Sexual Orientation</Label>
+                      <Input
+                        placeholder='Optional'
+                        {...register('sexual_orientation')}
+                      />
+                    </div>
+                  </div>
+                  <div className='mt-3 flex flex-wrap gap-6'>
+                    <CheckField
+                      name='transportation_access'
+                      label='Has Transportation Access'
+                    />
+                    <CheckField
+                      name='sexually_active'
+                      label='Sexually Active'
+                    />
                   </div>
                 </div>
 
@@ -1303,7 +1634,47 @@ export default function CreatePatientPage() {
               </CardContent>
             </Card>
           </TabsContent>
-          {/* ═══ TAB 5: Documents ═════════════════════════════════════ */}
+          {/* ═══ TAB 5: Consent & HIPAA ═══════════════════════════════ */}
+          <TabsContent value='consent'>
+            <Card>
+              <CardHeader>
+                <CardTitle>Consent & HIPAA</CardTitle>
+                <CardDescription>
+                  Patient consent, HIPAA authorization, and certification
+                </CardDescription>
+              </CardHeader>
+              <CardContent className='space-y-4'>
+                <div className='grid grid-cols-2 gap-6'>
+                  <div className='flex flex-col gap-4'>
+                    <CheckField
+                      name='hipaa_consent_given'
+                      label='HIPAA Consent Given'
+                    />
+                    <CheckField
+                      name='hipaa_privacy_notice_given'
+                      label='Privacy Notice Given'
+                    />
+                    <CheckField
+                      name='patient_acknowledgment'
+                      label='Patient Acknowledgment'
+                    />
+                  </div>
+                  <div className='space-y-4'>
+                    <div className='space-y-2'>
+                      <Label>HIPAA Consent Date</Label>
+                      <Input type='date' {...register('hipaa_consent_date')} />
+                    </div>
+                    <div className='space-y-2'>
+                      <Label>Certification Date</Label>
+                      <Input type='date' {...register('certification_date')} />
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* ═══ TAB 6: Documents ═════════════════════════════════════ */}
           <TabsContent value='documents'>
             <Card>
               <CardHeader>

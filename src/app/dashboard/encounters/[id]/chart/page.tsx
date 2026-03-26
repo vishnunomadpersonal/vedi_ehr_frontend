@@ -34,8 +34,16 @@ import {
   AlertTriangle,
   Save,
   Sparkles,
-  Loader2
+  Loader2,
+  PanelLeftClose,
+  PanelLeftOpen
 } from 'lucide-react';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+  TooltipProvider
+} from '@/components/ui/tooltip';
 import type { Encounter, ClinicalImpression, Transcript } from '@/types';
 import { PatientSummary } from '@/components/clinical/patient-summary';
 import { toast } from 'sonner';
@@ -60,6 +68,7 @@ export default function EncounterChartPage() {
   const [showSignDialog, setShowSignDialog] = useState(false);
   const [generatingSoap, setGeneratingSoap] = useState(false);
   const [editingSOAP, setEditingSOAP] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   // Editable SOAP state
   const [soapDraft, setSoapDraft] = useState({
@@ -262,9 +271,9 @@ export default function EncounterChartPage() {
   const isSigned = encounter.status === 'completed';
 
   return (
-    <div className='flex h-[calc(100vh-8rem)] gap-6'>
-      {/* Left: Patient Summary Sidebar */}
-      {patient && (
+    <div className='flex h-[calc(100vh-8rem)] gap-4 p-4 md:px-6'>
+      {/* Left: Patient Summary Sidebar — collapsible */}
+      {sidebarOpen && patient && (
         <aside className='bg-card w-72 shrink-0 overflow-hidden rounded-lg border'>
           <PatientSummary patient={patient as any} />
         </aside>
@@ -275,6 +284,27 @@ export default function EncounterChartPage() {
         {/* Encounter Header */}
         <div className='mb-4 flex items-center justify-between'>
           <div className='flex items-center gap-3'>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant='ghost'
+                    size='icon'
+                    className='h-8 w-8 shrink-0'
+                    onClick={() => setSidebarOpen((o) => !o)}
+                  >
+                    {sidebarOpen ? (
+                      <PanelLeftClose className='h-4 w-4' />
+                    ) : (
+                      <PanelLeftOpen className='h-4 w-4' />
+                    )}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side='bottom'>
+                  {sidebarOpen ? 'Hide patient brief' : 'Show patient brief'}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
             <Button asChild variant='ghost' size='icon'>
               <Link href='/dashboard/encounters'>
                 <ArrowLeft className='h-4 w-4' />

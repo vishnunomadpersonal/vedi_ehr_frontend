@@ -17,7 +17,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { Patient, Vital } from '@/types';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { apiClient } from '@/lib/api';
 
 interface PatientSummaryProps {
   patient: Patient;
@@ -68,35 +69,51 @@ function CollapsibleSection({
   );
 }
 
-function AllergiesSection({ patient }: { patient: Patient }) {
-  // Pull allergies from lifestyle_and_habits (real DB data), fall back to legacy flat array
-  const lh = patient.lifestyle_and_habits;
+function AllergiesSection({ patientId }: { patientId: string }) {
+  const [lifestyle, setLifestyle] = useState<Record<string, unknown> | null>(
+    null
+  );
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!patientId) return;
+    setLoading(true);
+    apiClient
+      .get<{ success: boolean; data: Record<string, unknown> | null }>(
+        `/v1/lifestyle/patient/${patientId}/latest`
+      )
+      .then((res) => setLifestyle(res.data))
+      .catch(() => setLifestyle(null))
+      .finally(() => setLoading(false));
+  }, [patientId]);
+
   const allergyItems: { label: string; items: string[] }[] = [];
 
-  if (lh) {
+  if (lifestyle) {
+    const lh = lifestyle as Record<string, string | boolean>;
     if (lh.allergies_medications) {
-      lh.allergies_medications
+      String(lh.allergies_medications)
         .split(',')
         .map((s) => s.trim())
         .filter(Boolean)
         .forEach((a) => allergyItems.push({ label: 'med', items: [a] }));
     }
     if (lh.allergies_food) {
-      lh.allergies_food
+      String(lh.allergies_food)
         .split(',')
         .map((s) => s.trim())
         .filter(Boolean)
         .forEach((a) => allergyItems.push({ label: 'food', items: [a] }));
     }
     if (lh.allergies_environmental) {
-      lh.allergies_environmental
+      String(lh.allergies_environmental)
         .split(',')
         .map((s) => s.trim())
         .filter(Boolean)
         .forEach((a) => allergyItems.push({ label: 'env', items: [a] }));
     }
     if (lh.allergies_other) {
-      lh.allergies_other
+      String(lh.allergies_other)
         .split(',')
         .map((s) => s.trim())
         .filter(Boolean)
@@ -104,16 +121,20 @@ function AllergiesSection({ patient }: { patient: Patient }) {
     }
   }
 
-  // Fallback to legacy flat array
-  const legacyAllergies = patient.allergies || [];
-  if (allergyItems.length === 0 && legacyAllergies.length > 0) {
-    legacyAllergies.forEach((a) =>
-      allergyItems.push({ label: '', items: [a] })
+  const isNKA = lifestyle?.no_known_allergies === true;
+  const totalCount = allergyItems.length;
+
+  if (loading) {
+    return (
+      <CollapsibleSection
+        title='Allergies'
+        icon={AlertTriangle}
+        iconColor='text-amber-500'
+      >
+        <Skeleton className='h-4 w-full' />
+      </CollapsibleSection>
     );
   }
-
-  const isNKA = lh?.no_known_allergies === true;
-  const totalCount = allergyItems.length;
 
   return (
     <CollapsibleSection
@@ -145,18 +166,47 @@ function AllergiesSection({ patient }: { patient: Patient }) {
   );
 }
 
-function MedicationsSection({ patient }: { patient: Patient }) {
-  // Pull medications from medical_history.current_medications (comma-separated string),
-  // fall back to legacy flat array
-  let meds: string[] = patient.medications || [];
+function MedicationsSection({ patientId }: { patientId: string }) {
+  const [meds, setMeds] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const mh = patient.medical_history;
-  if (mh?.current_medications) {
-    const parsed = mh.current_medications
-      .split(',')
-      .map((s) => s.trim())
-      .filter(Boolean);
-    if (parsed.length > 0) meds = parsed;
+  useEffect(() => {
+    if (!patientId) return;
+    setLoading(true);
+    apiClient
+      .get<{ success: boolean; data: Record<string, unknown>[] }>(
+        `/v1/medical-history`,
+        {
+          patient_id: patientId,
+          _end: '1',
+          _sort: 'medical_history_id',
+          _order: 'desc'
+        }
+      )
+      .then((res) => {
+        const record = res.data?.[0];
+        if (record?.current_medications) {
+          const parsed = String(record.current_medications)
+            .split(',')
+            .map((s) => s.trim())
+            .filter(Boolean);
+          setMeds(parsed);
+        }
+      })
+      .catch(() => setMeds([]))
+      .finally(() => setLoading(false));
+  }, [patientId]);
+
+  if (loading) {
+    return (
+      <CollapsibleSection
+        title='Medications'
+        icon={Pill}
+        iconColor='text-blue-500'
+      >
+        <Skeleton className='h-4 w-full' />
+      </CollapsibleSection>
+    );
   }
 
   return (
@@ -182,50 +232,96 @@ function MedicationsSection({ patient }: { patient: Patient }) {
   );
 }
 
-function ProblemListSection({ patient }: { patient: Patient }) {
-  // Derive conditions from medical_history instead of calling non-existent /conditions endpoint
-  const mh = patient.medical_history;
-  const conditions: {
-    id: string;
-    display: string;
-    code?: string;
-    severity?: string;
-  }[] = [];
+function ProblemListSection({ patientId }: { patientId: string }) {
+  // Derive conditions from medical_history API
+  const [conditions, setConditions] = useState<
+    {
+      id: string;
+      display: string;
+      code?: string;
+      severity?: string;
+    }[]
+  >([]);
+  const [loading, setLoading] = useState(true);
 
-  // Use coded conditions if available
-  if (
-    mh?.chronic_conditions_coded &&
-    Array.isArray(mh.chronic_conditions_coded)
-  ) {
-    mh.chronic_conditions_coded.forEach((c, i) => {
-      conditions.push({
-        id: `coded-${i}`,
-        display: c.display,
-        code: c.code,
-        severity: c.status === 'active' ? undefined : c.status
-      });
-    });
-  }
+  useEffect(() => {
+    if (!patientId) return;
+    setLoading(true);
+    apiClient
+      .get<{ success: boolean; data: Record<string, unknown>[] }>(
+        `/v1/medical-history`,
+        {
+          patient_id: patientId,
+          _end: '1',
+          _sort: 'medical_history_id',
+          _order: 'desc'
+        }
+      )
+      .then((res) => {
+        const mh = res.data?.[0];
+        if (!mh) return;
+        const items: typeof conditions = [];
 
-  // Fallback to boolean flags
-  if (conditions.length === 0 && mh) {
-    const booleanConditions: [string, string][] = [
-      ['chronic_conditions_hypertension', 'Hypertension'],
-      ['chronic_conditions_diabetes', 'Diabetes'],
-      ['chronic_conditions_asthma', 'Asthma'],
-      ['chronic_conditions_heart_disease', 'Heart Disease']
-    ];
-    booleanConditions.forEach(([key, label]) => {
-      if ((mh as Record<string, unknown>)[key] === true) {
-        conditions.push({ id: key, display: label });
-      }
-    });
-    if (mh.chronic_conditions_other && mh.chronic_conditions_other_detail) {
-      conditions.push({
-        id: 'other',
-        display: mh.chronic_conditions_other_detail
-      });
-    }
+        // Use coded conditions if available
+        if (
+          mh.chronic_conditions_coded &&
+          Array.isArray(mh.chronic_conditions_coded)
+        ) {
+          (
+            mh.chronic_conditions_coded as Array<{
+              display: string;
+              code: string;
+              status?: string;
+            }>
+          ).forEach((c, i) => {
+            items.push({
+              id: `coded-${i}`,
+              display: c.display,
+              code: c.code,
+              severity: c.status === 'active' ? undefined : c.status
+            });
+          });
+        }
+
+        // Fallback to boolean flags
+        if (items.length === 0) {
+          const booleanConditions: [string, string][] = [
+            ['chronic_conditions_hypertension', 'Hypertension'],
+            ['chronic_conditions_diabetes', 'Diabetes'],
+            ['chronic_conditions_asthma', 'Asthma'],
+            ['chronic_conditions_heart_disease', 'Heart Disease']
+          ];
+          booleanConditions.forEach(([key, label]) => {
+            if (mh[key] === true) {
+              items.push({ id: key, display: label });
+            }
+          });
+          if (
+            mh.chronic_conditions_other &&
+            mh.chronic_conditions_other_detail
+          ) {
+            items.push({
+              id: 'other',
+              display: String(mh.chronic_conditions_other_detail)
+            });
+          }
+        }
+        setConditions(items);
+      })
+      .catch(() => setConditions([]))
+      .finally(() => setLoading(false));
+  }, [patientId]);
+
+  if (loading) {
+    return (
+      <CollapsibleSection
+        title='Problem List'
+        icon={FileWarning}
+        iconColor='text-orange-500'
+      >
+        <Skeleton className='h-4 w-full' />
+      </CollapsibleSection>
+    );
   }
 
   return (
@@ -375,13 +471,41 @@ function VitalsSection({ patientId }: { patientId: string }) {
   );
 }
 
-function InsuranceSection({ patient }: { patient: Patient }) {
-  const ins = patient.insurance_information;
-  const legacy = patient.insurance;
-  const provider = ins?.primary_insurance_provider || legacy?.provider;
-  const policyNum = ins?.policy_number || legacy?.policy_number;
-  const groupNum = ins?.group_number || legacy?.group_number;
+function InsuranceSection({ patientId }: { patientId: string }) {
+  const [ins, setIns] = useState<Record<string, unknown> | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!patientId) return;
+    setLoading(true);
+    apiClient
+      .get<{ success: boolean; data: Record<string, unknown> | null }>(
+        `/v1/insurance/patient/${patientId}/latest`
+      )
+      .then((res) => setIns(res.data))
+      .catch(() => setIns(null))
+      .finally(() => setLoading(false));
+  }, [patientId]);
+
+  const provider = ins?.primary_insurance_provider as string | undefined;
+  const policyNum = ins?.policy_number as string | undefined;
+  const groupNum = ins?.group_number as string | undefined;
+  const planType = ins?.plan_type as string | undefined;
+  const insStatus = ins?.status as string | undefined;
   const hasData = !!(provider || policyNum);
+
+  if (loading) {
+    return (
+      <CollapsibleSection
+        title='Insurance'
+        icon={ShieldCheck}
+        iconColor='text-indigo-500'
+        defaultOpen={true}
+      >
+        <Skeleton className='h-4 w-full' />
+      </CollapsibleSection>
+    );
+  }
 
   return (
     <CollapsibleSection
@@ -410,16 +534,16 @@ function InsuranceSection({ patient }: { patient: Patient }) {
               <span className='font-mono'>{groupNum}</span>
             </div>
           )}
-          {ins?.plan_type && (
+          {planType && (
             <div>
               <span className='text-muted-foreground'>Plan: </span>
-              <span className='font-medium'>{ins.plan_type}</span>
+              <span className='font-medium'>{planType}</span>
             </div>
           )}
-          {ins?.status && (
+          {insStatus && (
             <div>
               <span className='text-muted-foreground'>Status: </span>
-              <span className='font-medium capitalize'>{ins.status}</span>
+              <span className='font-medium capitalize'>{insStatus}</span>
             </div>
           )}
         </div>
@@ -473,15 +597,15 @@ export function PatientSummary({ patient }: PatientSummaryProps) {
         <Separator />
 
         {/* Clinical Sections */}
-        <AllergiesSection patient={patient} />
+        <AllergiesSection patientId={patient.id} />
         <Separator />
-        <ProblemListSection patient={patient} />
+        <ProblemListSection patientId={patient.id} />
         <Separator />
-        <MedicationsSection patient={patient} />
+        <MedicationsSection patientId={patient.id} />
         <Separator />
         <VitalsSection patientId={patient.id} />
         <Separator />
-        <InsuranceSection patient={patient} />
+        <InsuranceSection patientId={patient.id} />
       </div>
     </ScrollArea>
   );

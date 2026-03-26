@@ -157,6 +157,13 @@ export async function updateAppointmentStatus(
   return { data: res.data, status: 200 };
 }
 
+export async function updateEncounterStatus(
+  encounterId: string,
+  status: string
+): Promise<void> {
+  await apiClient.patch(`/v1/encounters/${encounterId}`, { status });
+}
+
 export async function deleteAppointment(id: string): Promise<{ ok: boolean }> {
   await apiClient.delete(`${APPT_BASE}/${id}`);
   return { ok: true };

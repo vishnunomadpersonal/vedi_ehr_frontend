@@ -25,8 +25,12 @@ import {
 import Link from 'next/link';
 import type { CalEvent } from '@/types/calendar-types';
 import { STATUS_COLORS } from '@/types/calendar-types';
-import { updateAppointmentStatus } from '@/lib/schedule-service';
+import {
+  updateAppointmentStatus,
+  updateEncounterStatus
+} from '@/lib/schedule-service';
 import { toast } from 'sonner';
+import { useRouter } from 'next/navigation';
 
 interface CalendarEventViewDialogProps {
   eventDetails: CalEvent | undefined;
@@ -53,9 +57,32 @@ const CalendarEventViewDialog: React.FC<CalendarEventViewDialogProps> = ({
   onStatusChanged
 }) => {
   const [statusLoading, setStatusLoading] = useState(false);
+  const router = useRouter();
   const status = eventDetails?.extendedProps?.status || 'scheduled';
   const encounterId = eventDetails?.extendedProps?.encounter_id;
   const hasEncounter = !!encounterId && encounterId !== '';
+
+  const handleStartVisit = async () => {
+    if (!eventDetails || !encounterId) return;
+    setStatusLoading(true);
+    try {
+      // Update both appointment and encounter to in_progress
+      await updateAppointmentStatus(eventDetails.id, 'in_progress');
+      await updateEncounterStatus(encounterId, 'in_progress');
+      if (eventDetails.extendedProps) {
+        eventDetails.extendedProps.status = 'in_progress';
+      }
+      toast.success('Visit started');
+      onStatusChanged?.();
+      setShowEventViewDialog(false);
+      router.push(`/dashboard/encounters/${encounterId}/chart`);
+    } catch (error) {
+      console.error('Error starting visit:', error);
+      toast.error('Failed to start visit');
+    } finally {
+      setStatusLoading(false);
+    }
+  };
 
   const handleStatusChange = async (newStatus: string) => {
     if (!eventDetails) return;
@@ -134,10 +161,18 @@ const CalendarEventViewDialog: React.FC<CalendarEventViewDialogProps> = ({
                 )}
 
                 {status === 'checked_in' && hasEncounter && (
-                  <Button className='w-full' size='sm' asChild>
-                    <Link href={`/dashboard/encounters/${encounterId}/chart`}>
-                      <Play className='mr-2 h-4 w-4' /> Start Visit — Open Chart
-                    </Link>
+                  <Button
+                    className='w-full'
+                    size='sm'
+                    onClick={handleStartVisit}
+                    disabled={statusLoading}
+                  >
+                    {statusLoading ? (
+                      <Loader2 className='mr-2 h-4 w-4 animate-spin' />
+                    ) : (
+                      <Play className='mr-2 h-4 w-4' />
+                    )}
+                    Start Visit — Open Chart
                   </Button>
                 )}
 
